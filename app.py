@@ -9,6 +9,20 @@ import re
 import pickle
 from datetime import datetime
 
+import streamlit as st
+
+st.set_page_config(
+    page_title="SecureShe AI - Online Safety Assistant",
+    page_icon="🛡️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+
+# Now your other Streamlit code
+st.title("Welcome to SecureShe AI")
+
+
 # ============================================
 # LOAD ML MODEL (Optional)
 # ============================================
@@ -28,13 +42,6 @@ ML_MODEL = load_ml_model()
 # ============================================
 # PAGE CONFIGURATION
 # ============================================
-
-st.set_page_config(
-    page_title="SecureShe AI - Online Safety Assistant",
-    page_icon="🛡️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # Custom CSS
 st.markdown("""
