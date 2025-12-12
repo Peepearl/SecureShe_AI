@@ -1,0 +1,12 @@
+# SecureShe AI - Streamlit Demo Requirements
+# Install with: pip install -r requirements.txt
+
+# Core dependencies for Streamlit demo
+streamlit==1.29.0
+rapidfuzz==3.5.2
+
+# Optional: Add these if you want to integrate ML model later
+# scikit-learn==1.3.0
+# pandas==2.0.3
+# numpy==1.24.3
+# nltk==3.8.1
