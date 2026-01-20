@@ -255,8 +255,8 @@ ADVICE_TEMPLATES = {
 RESOURCES = [
     {"name": "🚨 Emergency Services", "contact": "112"},
     {"name": "👮 Police Cyber Crime", "contact": "155260"},
-    {"name": "🏢 Paradigm Initiative", "contact": "+234-814-846-6676"},
-    {"name": "💪 Women at Risk Foundation", "contact": "08092178000"}
+    {"name": "🏢 Paradigm Initiative", "contact": "+234-000-000-0000"},
+    {"name": "💪 Women at Risk Foundation", "contact": "00000000000"}
 ]
 
 # ============================================
