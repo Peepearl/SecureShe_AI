@@ -1,6 +1,6 @@
 """
-SecureShe AI - FIXED VERSION
-This version WILL detect threats properly
+SecureShe AI - Clean Interface Version
+Online Safety Assistant for Nigerian Women
 Run with: streamlit run app.py
 """
 
@@ -9,7 +9,9 @@ import re
 import pickle
 from datetime import datetime
 
-import streamlit as st
+# ============================================
+# PAGE CONFIGURATION
+# ============================================
 
 st.set_page_config(
     page_title="SecureShe AI - Online Safety Assistant",
@@ -17,11 +19,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-
-# Now your other Streamlit code
-st.title("Welcome to SecureShe AI")
-
 
 # ============================================
 # LOAD ML MODEL (Optional)
@@ -40,10 +37,9 @@ def load_ml_model():
 ML_MODEL = load_ml_model()
 
 # ============================================
-# PAGE CONFIGURATION
+# CUSTOM CSS
 # ============================================
 
-# Custom CSS
 st.markdown("""
 <style>
     .main-header {
@@ -78,17 +74,11 @@ st.markdown("""
         border-radius: 5px;
         margin: 1rem 0;
     }
-    .metric-card {
-        background-color: #f5f5f5;
-        padding: 1rem;
-        border-radius: 10px;
-        text-align: center;
-    }
 </style>
 """, unsafe_allow_html=True)
 
 # ============================================
-# CONFIGURATION - EXPANDED KEYWORDS
+# CONFIGURATION - KEYWORDS & THRESHOLDS
 # ============================================
 
 KEYWORDS = {
@@ -157,9 +147,8 @@ KEYWORDS = {
     ]
 }
 
-# LOWERED THRESHOLDS - More sensitive detection
 THRESHOLDS = {
-    "harassment": 0.15,      # Lower = more sensitive
+    "harassment": 0.15,
     "threats": 0.15,
     "blackmail": 0.15,
     "stalking": 0.15,
@@ -237,55 +226,91 @@ ADVICE_TEMPLATES = {
 RESOURCES = [
     {"name": "🚨 Emergency Services", "contact": "112"},
     {"name": "👮 Police Cyber Crime", "contact": "155260"},
-    {"name": "🏢 Paradigm Initiative", "contact": "+234-814-846-6676"},
-    {"name": "💪 Women at Risk Foundation", "contact": "08092178000"}
+    {"name": "🏢 Paradigm Initiative", "contact": "+234-000-000-000"},
+    {"name": "💪 Women at Risk Foundation", "contact": "0000000000"}
 ]
 
 # ============================================
-# IMPROVED DETECTION FUNCTIONS
+# DETECTION FUNCTIONS
 # ============================================
 
 def simple_keyword_match(text, keywords):
-    """
-    Simple keyword matching - more reliable than fuzzy matching
-    """
+    """Simple keyword matching"""
     text_lower = text.lower()
     matched = []
     
     for keyword in keywords:
         keyword_lower = keyword.lower()
-        # Check if keyword is in text (as whole word or part of word)
         if keyword_lower in text_lower:
             matched.append(keyword)
     
     return len(matched), matched
 
 def analyze_message(text):
-    """
-    FIXED analysis function - will actually detect threats
-    """
+    """Analyze message for threats"""
     detected = {}
     text_lower = text.lower()
     
-    # Check each category
+    # CRITICAL THREAT PHRASES - Boost these significantly
+    critical_phrases = {
+        "threats": [
+            "i will kill", "i'll kill", "gonna kill", "going to kill",
+            "i will hurt", "i'll hurt", "gonna hurt",
+            "i will beat", "i'll beat", "gonna beat",
+            "i will destroy", "i'll destroy",
+            "i know where you live", "i know your address",
+            "coming for you", "i will find you",
+            "you will die", "you gonna die",
+            "watch your back", "you will regret"
+        ],
+        "blackmail": [
+            "send nudes or", "send pics or", "pay me or",
+            "or i will leak", "or i'll expose", "or i post",
+            "or else i", "if you don't send"
+        ],
+        "inappropriate_advances": [
+            "send nudes", "send pics", "show me your body",
+            "send naked", "i want to see you naked"
+        ]
+    }
+    
+    # Check for critical phrases FIRST (these get immediate high scores)
+    for category, phrases in critical_phrases.items():
+        for phrase in phrases:
+            if phrase in text_lower:
+                if category not in detected:
+                    detected[category] = {
+                        "score": 0.85,  # High score for critical phrases
+                        "confidence": "high",
+                        "evidence": [phrase],
+                        "method": "critical-phrase"
+                    }
+                else:
+                    detected[category]["score"] = max(detected[category]["score"], 0.85)
+                    if phrase not in detected[category]["evidence"]:
+                        detected[category]["evidence"].append(phrase)
+    
+    # Check each category with regular keywords
     for category, keywords in KEYWORDS.items():
         match_count, matched = simple_keyword_match(text, keywords)
         
         if match_count > 0:
-            # Calculate score
-            score = min(match_count * 0.3, 1.0)  # Each keyword adds 30%
-            
-            # Get threshold for this category
+            # Higher base score per keyword
+            score = min(match_count * 0.4, 1.0)
             threshold = THRESHOLDS.get(category, 0.15)
             
-            # If score exceeds threshold, flag it
             if score >= threshold:
-                detected[category] = {
-                    "score": round(score, 3),
-                    "confidence": "high" if score > 0.6 else "medium" if score > 0.3 else "low",
-                    "evidence": matched[:5],  # Show first 5 matches
-                    "method": "keyword-based"
-                }
+                if category in detected:
+                    # Boost existing detection
+                    detected[category]["score"] = min(detected[category]["score"] + score * 0.3, 1.0)
+                    detected[category]["evidence"].extend(matched[:3])
+                else:
+                    detected[category] = {
+                        "score": round(score, 3),
+                        "confidence": "high" if score > 0.6 else "medium" if score > 0.3 else "low",
+                        "evidence": matched[:5],
+                        "method": "keyword-based"
+                    }
     
     # Try ML model if available
     if ML_MODEL is not None:
@@ -294,14 +319,11 @@ def analyze_message(text):
             ml_proba = ML_MODEL.predict_proba([text])[0]
             ml_confidence = max(ml_proba)
             
-            # Only use ML if it detects something AND is confident
             if ml_pred != "safe" and ml_confidence >= 0.3:
                 if ml_pred in detected:
-                    # Boost existing detection
                     detected[ml_pred]["score"] = min(detected[ml_pred]["score"] + 0.2, 1.0)
                     detected[ml_pred]["method"] = "keyword + ML"
                 else:
-                    # Add ML detection
                     detected[ml_pred] = {
                         "score": round(ml_confidence, 3),
                         "confidence": "high" if ml_confidence > 0.7 else "medium",
@@ -309,26 +331,33 @@ def analyze_message(text):
                         "method": "ML-only"
                     }
         except:
-            pass  # ML failed, continue with keyword-based
+            pass
     
-    # Determine urgency
+    # Determine urgency and risk level
     urgent = False
-    if "threats" in detected and detected["threats"]["score"] >= 0.5:
+    
+    # Mark as URGENT for critical threats
+    if "threats" in detected and detected["threats"]["score"] >= 0.7:
         urgent = True
-    if len(detected) >= 3:  # Multiple categories detected
+    if "blackmail" in detected and detected["blackmail"]["score"] >= 0.7:
+        urgent = True
+    if len(detected) >= 3:  # Multiple threat types
         urgent = True
     
-    # Determine risk level
     if not detected:
         risk_level = "safe"
     else:
         max_score = max(d["score"] for d in detected.values())
-        if max_score >= 0.7 or urgent:
+        
+        # More aggressive risk classification
+        if max_score >= 0.75 or urgent:
             risk_level = "urgent"
-        elif max_score >= 0.4:
+        elif max_score >= 0.5:
             risk_level = "high"
-        else:
+        elif max_score >= 0.3:
             risk_level = "medium"
+        else:
+            risk_level = "low"
     
     return {
         "detected": detected,
@@ -350,14 +379,6 @@ def main():
     with st.sidebar:
         st.image("https://img.icons8.com/fluency/96/000000/security-shield-green.png", width=100)
         st.title("About SecureShe AI")
-        
-        # Model status
-        if ML_MODEL:
-            st.success("✅ ML Model Loaded")
-            st.caption("Using keyword + ML detection")
-        else:
-            st.info("📊 Keyword-Based Mode")
-            st.caption("Reliable detection without ML")
         
         st.markdown("""
         **What we detect:**
@@ -384,128 +405,119 @@ def main():
         st.divider()
         st.caption("⚠️ If you're in immediate danger, call 112")
     
-    # Main content
-    col1, col2 = st.columns([2, 1])
+    # Main content - Single column layout
+    st.subheader("📝 Analyze a Message")
+    
+    # Consent checkbox
+    consent = st.checkbox(
+        "I understand this is a support tool and not a replacement for emergency services",
+        value=False
+    )
+    
+    # Text input
+    message = st.text_area(
+        "Paste the message you received:",
+        height=150,
+        placeholder="Example: 'I will kill you' or 'Send nudes now'",
+        help="Your message is analyzed but NOT stored"
+    )
+    
+    # Example buttons (compact)
+    st.caption("🧪 Quick test examples:")
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    examples = {
+        "🔴 Threat": "I will kill you if you don't listen",
+        "💰 Blackmail": "Send nudes or I leak your photos",
+        "🎣 Scam": "Send your account number to claim prize",
+        "😡 Harassment": "You are stupid mumu olodo",
+        "🟢 Safe": "How are you doing today?"
+    }
     
     with col1:
-        st.subheader("📝 Analyze a Message")
-        
-        # Consent checkbox
-        consent = st.checkbox(
-            "I understand this is a support tool and not a replacement for emergency services",
-            value=False
-        )
-        
-        # Text input
-        message = st.text_area(
-            "Paste the message you received:",
-            height=150,
-            placeholder="Example: 'I will kill you' or 'Send nudes now'",
-            help="Your message is analyzed but NOT stored"
-        )
-        
-        # Analyze button
-        analyze_btn = st.button("🔍 Analyze Message", type="primary", disabled=not consent)
-        
-        if analyze_btn and message:
-            with st.spinner("Analyzing message..."):
-                result = analyze_message(message)
-                
-                st.divider()
-                
-                # Display results
-                if result["risk_level"] == "safe":
-                    st.markdown('<div class="safe-box">', unsafe_allow_html=True)
-                    st.success("✅ **No Immediate Risks Detected**")
-                    st.write("This message doesn't show obvious warning signs. However, trust your instincts—if something feels wrong, it probably is.")
-                    if result["ml_used"]:
-                        st.caption("🤖 Analyzed with ML + Keywords")
-                    else:
-                        st.caption("📊 Analyzed with keyword detection")
-                    st.markdown('</div>', unsafe_allow_html=True)
-                
-                else:
-                    # Urgent warning
-                    if result["urgent"]:
-                        st.markdown('<div class="danger-box">', unsafe_allow_html=True)
-                        st.error("🚨 **URGENT WARNING**")
-                        st.write("**You may be in danger. If you feel unsafe, contact emergency services immediately: 112**")
-                        st.markdown('</div>', unsafe_allow_html=True)
-                    
-                    # Risk level
-                    if result["risk_level"] == "urgent":
-                        st.markdown('<div class="danger-box">', unsafe_allow_html=True)
-                        st.error(f"🔴 **Risk Level: {result['risk_level'].upper()}**")
-                    elif result["risk_level"] == "high":
-                        st.markdown('<div class="warning-box">', unsafe_allow_html=True)
-                        st.warning(f"🟠 **Risk Level: {result['risk_level'].upper()}**")
-                    else:
-                        st.markdown('<div class="warning-box">', unsafe_allow_html=True)
-                        st.warning(f"🟡 **Risk Level: {result['risk_level'].upper()}**")
-                    
-                    # Detected risks
-                    st.write("**Detected Risks:**")
-                    for category, info in result["detected"].items():
-                        confidence_pct = int(info["score"] * 100)
-                        evidence_str = ", ".join(info["evidence"][:3])
-                        st.write(f"• **{category.replace('_', ' ').title()}**: {confidence_pct}% confidence")
-                        st.caption(f"   Matched: {evidence_str}")
-                    
-                    st.markdown('</div>', unsafe_allow_html=True)
-                    
-                    # Advice
-                    st.subheader("💡 What You Should Do")
-                    
-                    for category in result["detected"].keys():
-                        template = ADVICE_TEMPLATES.get(category)
-                        if template:
-                            with st.expander(template["title"], expanded=True):
-                                for step in template["steps"]:
-                                    st.write(step)
-        
-        elif analyze_btn and not message:
-            st.warning("⚠️ Please enter a message to analyze")
-    
+        if st.button("🔴 Threat", use_container_width=True):
+            st.session_state.example_message = examples["🔴 Threat"]
+            st.rerun()
     with col2:
-        st.subheader("📊 System Status")
-        
-        # Model status
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        if ML_MODEL:
-            st.metric("Detection Mode", "🤖 Hybrid", "Keyword + ML")
-        else:
-            st.metric("Detection Mode", "📊 Keywords", "Fast & Reliable")
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Sensitivity", "High", "Lowered thresholds")
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Categories", "7", "Types of threats")
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-        st.divider()
-        
-        st.subheader("🧪 Try Example Messages")
-        
-        examples = {
-            "🔴 Threat": "I will kill you if you don't listen",
-            "💰 Blackmail": "Send nudes or I leak your photos",
-            "🎣 Scam": "Send your account number to claim prize",
-            "😡 Harassment": "You are stupid mumu olodo",
-            "🟢 Safe": "How are you doing today?"
-        }
-        
-        for label, example in examples.items():
-            if st.button(label, key=label, use_container_width=True):
-                st.session_state.example_message = example
-                st.rerun()
+        if st.button("💰 Blackmail", use_container_width=True):
+            st.session_state.example_message = examples["💰 Blackmail"]
+            st.rerun()
+    with col3:
+        if st.button("🎣 Scam", use_container_width=True):
+            st.session_state.example_message = examples["🎣 Scam"]
+            st.rerun()
+    with col4:
+        if st.button("😡 Harassment", use_container_width=True):
+            st.session_state.example_message = examples["😡 Harassment"]
+            st.rerun()
+    with col5:
+        if st.button("🟢 Safe", use_container_width=True):
+            st.session_state.example_message = examples["🟢 Safe"]
+            st.rerun()
     
     # Pre-fill example if clicked
     if 'example_message' in st.session_state:
+        message = st.session_state.example_message
         st.info(f"📝 Example loaded: {st.session_state.example_message}")
         del st.session_state.example_message
+    
+    # Analyze button
+    analyze_btn = st.button("🔍 Analyze Message", type="primary", disabled=not consent)
+    
+    if analyze_btn and message:
+        with st.spinner("Analyzing message..."):
+            result = analyze_message(message)
+            
+            st.divider()
+            
+            # Display results
+            if result["risk_level"] == "safe":
+                st.markdown('<div class="safe-box">', unsafe_allow_html=True)
+                st.success("✅ **No Immediate Risks Detected**")
+                st.write("This message doesn't show obvious warning signs. However, trust your instincts—if something feels wrong, it probably is.")
+                st.markdown('</div>', unsafe_allow_html=True)
+            
+            else:
+                # Urgent warning
+                if result["urgent"]:
+                    st.markdown('<div class="danger-box">', unsafe_allow_html=True)
+                    st.error("🚨 **URGENT WARNING**")
+                    st.write("**You may be in danger. If you feel unsafe, contact emergency services immediately: 112**")
+                    st.markdown('</div>', unsafe_allow_html=True)
+                
+                # Risk level
+                if result["risk_level"] == "urgent":
+                    st.markdown('<div class="danger-box">', unsafe_allow_html=True)
+                    st.error(f"🔴 **Risk Level: {result['risk_level'].upper()}**")
+                elif result["risk_level"] == "high":
+                    st.markdown('<div class="warning-box">', unsafe_allow_html=True)
+                    st.warning(f"🟠 **Risk Level: {result['risk_level'].upper()}**")
+                else:
+                    st.markdown('<div class="warning-box">', unsafe_allow_html=True)
+                    st.warning(f"🟡 **Risk Level: {result['risk_level'].upper()}**")
+                
+                # Detected risks
+                st.write("**Detected Risks:**")
+                for category, info in result["detected"].items():
+                    confidence_pct = int(info["score"] * 100)
+                    evidence_str = ", ".join(info["evidence"][:3])
+                    st.write(f"• **{category.replace('_', ' ').title()}**: {confidence_pct}% confidence")
+                    st.caption(f"   Matched: {evidence_str}")
+                
+                st.markdown('</div>', unsafe_allow_html=True)
+                
+                # Advice
+                st.subheader("💡 What You Should Do")
+                
+                for category in result["detected"].keys():
+                    template = ADVICE_TEMPLATES.get(category)
+                    if template:
+                        with st.expander(template["title"], expanded=True):
+                            for step in template["steps"]:
+                                st.write(step)
+    
+    elif analyze_btn and not message:
+        st.warning("⚠️ Please enter a message to analyze")
     
     # Footer
     st.divider()
