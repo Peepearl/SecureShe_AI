@@ -12,6 +12,7 @@ The system analyzes message content using a multi-layer detection pipeline and p
 
 This project demonstrates practical skills in NLP, feature engineering, risk modeling, safety-focused AI design, and ML deployment.
 
+
 ✨ Key Features
 🔎 Multi-Layer Threat Detection Architecture
 
@@ -41,6 +42,8 @@ Validates and boosts keyword-based detections
 
 System remains functional even without ML (graceful fallback design)
 
+
+
 🧠 Threat Categories
 
 The system detects across multiple risk types:
@@ -61,6 +64,8 @@ Inappropriate Advances
 
 Each prediction includes a severity score to support risk prioritization.
 
+
+
 🤖 Machine Learning Model
 
 Supervised learning using scikit-learn
@@ -79,6 +84,8 @@ Severity level
 
 Model serialized using joblib for deployment.
 
+
+
 🔐 Privacy-First Design
 
 SecureShe AI is designed with safety and privacy in mind:
@@ -90,6 +97,8 @@ No automatic sharing of private messages
 Architecture allows for optional anonymous aggregation (if integrated into organizations)
 
 Built to reduce burden — not enable surveillance
+
+
 
 🌐 Interactive Web Application
 
@@ -103,7 +112,8 @@ Clean, minimal user interface
 
 Designed for clarity under emotional stress
 
-🔗 Live Demo: [Add your Streamlit link here]
+🔗 Live Demo: [https://t.co/vPRQdnsKmY]
+
 
 📊 Feature Engineering
 
@@ -118,6 +128,7 @@ Custom threat lexicons
 Context-based scoring adjustments
 
 This hybrid rule + ML approach improves interpretability and transparency.
+
 
 🛠️ Tech Stack
 
@@ -231,5 +242,3 @@ Add a clean project architecture diagram section
 
 Help you write a strong “About the Author” section that sells you properly
 
-Just tell me the direction 🔥
-ML & Data:
